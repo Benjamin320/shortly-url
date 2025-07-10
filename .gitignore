@@ -1,0 +1,51 @@
+#! Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.pyo
+*.pyd
+*.db
+
+#! Entorno virtual
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+#! Configuración y secretos
+*.env
+*.env.*
+
+#! Archivos de logs
+*.log
+
+#! Archivos de sistema / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+*.bak
+
+#! Docker
+*.pid
+
+#! Otros (añade según tu stack)
+*.sqlite3
+node_modules/
+coverage/
+htmlcov/
+.cache/
+
+#! Para imágenes generadas, reportes, etc.
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.xls
+*.xlsx
