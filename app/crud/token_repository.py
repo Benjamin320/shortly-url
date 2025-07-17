@@ -40,6 +40,7 @@ class TokenRefreshRepository:
             token = self.get_token_by_user_id(token_upd.user_id)
             token.expiration = token_upd.expiration
             token.updated_at = token_upd.update_at
+            token.refresh_token = token_upd.refresh_token
             self.session.commit()
             
             return token
@@ -50,6 +51,7 @@ class TokenRefreshRepository:
         try:
             token = self.get_token_by_id(token_id)
             token.state = False
+            token.deleted_at = datetime.now()
             self.session.commit()
             return token
         except Exception as e:

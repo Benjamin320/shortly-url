@@ -34,3 +34,4 @@ def downgrade() -> None:
                existing_type=mysql.DATETIME(),
                nullable=False)
     # ### end Alembic commands ###
+

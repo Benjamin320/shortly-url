@@ -6,4 +6,5 @@ class TokenUpdate(SQLModel):
 
 class TokenExpiration(TokenUpdate):
     expiration: datetime
+    refresh_token: str
     user_id: int

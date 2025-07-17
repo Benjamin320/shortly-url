@@ -14,16 +14,35 @@ from app.schemas.token_refresh import TokenExpiration
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
+#! Funcion de ayuda para crear los jwt en las demas funciones
+def create_jwt(expiration: timedelta, type_token: str = "access", sub: int = None, username: str = None, rol: int = None, email: str = None) -> str:
+    
+    if type_token == "access":
+        to_encode = {"username": username, "rol": rol, "email": email, "exp": datetime.now(timezone.utc) + expiration, "type": "access"}
+        
+        token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        
+        return token
+    elif type_token == "refresh":
+        to_encode = {"sub": sub, "exp": datetime.now(timezone.utc) + expiration, "type": "refresh"}
+        
+        token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        
+        return token
+
 #* crear token
 def create_acces_token(data: UserInfo, expiration: timedelta = timedelta(minutes=15)):
     to_encode = data.model_dump()
     print(to_encode)    
-
-    expiration = datetime.now(timezone.utc) + expiration
     
-    to_encode.update({"exp": expiration, "type": "access"})
+    token = create_jwt(
+        expiration=expiration, 
+        type_token="access", 
+        username=to_encode["username"], 
+        rol=to_encode["rol"], 
+        email=to_encode["email"]
+    )
     
-    token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return token
 
 #* crear refresh token	
@@ -34,19 +53,30 @@ def create_refresh_token(db: Session, user_id: int, expiration: timedelta = time
     try:
         refresh_token_db = tokenService.get_token_by_id(user_id)
         
+        #* Si el refresh token ya existe, lo actualizaremos
         if refresh_token_db is not None:
+            refresh_token = create_jwt(
+                expiration=expiration, 
+                type_token="refresh", 
+                sub=user_id
+            )
+            
             token_u = TokenExpiration(
                 expiration=expire_at, 
-                user_id=user_id
+                user_id=user_id,
+                refresh_token=refresh_token
             )
             
             tokenService.update_expiration_token(token_u)
             
-            return refresh_token_db.refresh_token
-    
-        to_encode = {"sub": str(user_id)}
-        to_encode.update({"exp": expire_at, "type": "refresh"})
-        refresh_token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+            return refresh_token
+        
+        #* Si el refresh token no existe o esta expirado, creamos otro
+        refresh_token = create_jwt(
+            expiration=expiration, 
+            type_token="refresh", 
+            sub=user_id
+        )
 
         token_create = tokenService.create_token(TokenRefresh(refresh_token=refresh_token, user_id=user_id))
 
@@ -54,14 +84,14 @@ def create_refresh_token(db: Session, user_id: int, expiration: timedelta = time
             raise HTTPException(status_code=500, detail="Error al crear el token")
 
         return refresh_token
-    except Exception as e:
+    except JWTError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 #* verificar token
 def verify_token(token: str = Depends(oauth2_scheme)):
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        print(payload)
         
         #! Verifica que el token tenga los datos necesarios
         if not all([payload.get('username'), payload.get('rol'), payload.get('email')]):
